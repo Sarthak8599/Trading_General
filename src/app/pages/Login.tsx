@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import BullBearAnimation from '../components/BullBearAnimation';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -96,8 +95,21 @@ export default function Login() {
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0B1220] p-4 relative overflow-hidden">
-      <BullBearAnimation />
-      <div className="w-full max-w-md bg-[#161B22] border border-[#30363D] rounded-xl p-8 shadow-lg relative z-10">
+      {/* Bull and Bear Background Image */}
+      <div 
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: 'url(/bull-bear-trading.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.3
+        }}
+      />
+      {/* Overlay for better text readability */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0B1220] via-[#0B1220]/70 to-transparent" />
+      
+      <div className="w-full max-w-md bg-[#161B22]/90 border border-[#30363D] rounded-xl p-8 shadow-lg relative z-10 backdrop-blur-sm">
         <h1 className="text-2xl font-bold text-white mb-2">
           {isSignUp ? 'Sign Up' : 'Login'} to Trading Journal
         </h1>
@@ -190,8 +202,7 @@ export default function Login() {
               </>
             )}
           </div>
-
-                  </form>
+        </form>
       </div>
     </div>
   );

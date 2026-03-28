@@ -170,7 +170,106 @@ export default function Dashboard() {
     .map(([year, profit]) => ({ year, profit }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Animated Candlestick Chart Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0" style={{ opacity: 0.5 }}>
+        <svg className="w-full h-full" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <linearGradient id="candleGradientUp" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#00C853" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#00C853" stopOpacity="0.3" />
+            </linearGradient>
+            <linearGradient id="candleGradientDown" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#FF5252" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#FF5252" stopOpacity="0.3" />
+            </linearGradient>
+          </defs>
+          
+          {/* Animated candlesticks */}
+          <g className="animate-pulse">
+            {/* Candlestick 1 - Green */}
+            <rect x="50" y="200" width="8" height="60" fill="url(#candleGradientUp)" opacity="0.4">
+              <animate attributeName="height" values="60;80;60" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="y" values="200;190;200" dur="3s" repeatCount="indefinite" />
+            </rect>
+            <line x1="54" y1="180" x2="54" y2="280" stroke="#00C853" strokeWidth="1" opacity="0.5">
+              <animate attributeName="y1" values="180;170;180" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="y2" values="280;300;280" dur="3s" repeatCount="indefinite" />
+            </line>
+            
+            {/* Candlestick 2 - Red */}
+            <rect x="120" y="150" width="8" height="45" fill="url(#candleGradientDown)" opacity="0.4">
+              <animate attributeName="height" values="45;35;45" dur="2.5s" repeatCount="indefinite" />
+              <animate attributeName="y" values="150;160;150" dur="2.5s" repeatCount="indefinite" />
+            </rect>
+            <line x1="124" y1="120" x2="124" y2="210" stroke="#FF5252" strokeWidth="1" opacity="0.5">
+              <animate attributeName="y1" values="120;110;120" dur="2.5s" repeatCount="indefinite" />
+            </line>
+            
+            {/* Candlestick 3 - Green */}
+            <rect x="190" y="250" width="8" height="70" fill="url(#candleGradientUp)" opacity="0.4">
+              <animate attributeName="height" values="70;90;70" dur="4s" repeatCount="indefinite" />
+              <animate attributeName="y" values="250;240;250" dur="4s" repeatCount="indefinite" />
+            </rect>
+            <line x1="194" y1="200" x2="194" y2="340" stroke="#00C853" strokeWidth="1" opacity="0.5" />
+            
+            {/* Candlestick 4 - Red */}
+            <rect x="260" y="180" width="8" height="50" fill="url(#candleGradientDown)" opacity="0.4">
+              <animate attributeName="height" values="50;30;50" dur="3.5s" repeatCount="indefinite" />
+              <animate attributeName="y" values="180;200;180" dur="3.5s" repeatCount="indefinite" />
+            </rect>
+            <line x1="264" y1="150" x2="264" y2="250" stroke="#FF5252" strokeWidth="1" opacity="0.5" />
+            
+            {/* Candlestick 5 - Green */}
+            <rect x="330" y="300" width="8" height="55" fill="url(#candleGradientUp)" opacity="0.4">
+              <animate attributeName="height" values="55;75;55" dur="2.8s" repeatCount="indefinite" />
+            </rect>
+            <line x1="334" y1="250" x2="334" y2="370" stroke="#00C853" strokeWidth="1" opacity="0.5" />
+            
+            {/* Additional candlesticks for pattern */}
+            <rect x="400" y="220" width="8" height="40" fill="url(#candleGradientDown)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.5;0.3" dur="3s" repeatCount="indefinite" />
+            </rect>
+            <rect x="470" y="160" width="8" height="65" fill="url(#candleGradientUp)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3.2s" repeatCount="indefinite" />
+            </rect>
+            <rect x="540" y="280" width="8" height="35" fill="url(#candleGradientDown)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.5;0.3" dur="2.7s" repeatCount="indefinite" />
+            </rect>
+            <rect x="610" y="190" width="8" height="80" fill="url(#candleGradientUp)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3.8s" repeatCount="indefinite" />
+            </rect>
+            <rect x="680" y="240" width="8" height="45" fill="url(#candleGradientDown)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.5;0.3" dur="2.9s" repeatCount="indefinite" />
+            </rect>
+            <rect x="750" y="170" width="8" height="70" fill="url(#candleGradientUp)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3.4s" repeatCount="indefinite" />
+            </rect>
+            <rect x="820" y="260" width="8" height="50" fill="url(#candleGradientDown)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.5;0.3" dur="3.1s" repeatCount="indefinite" />
+            </rect>
+            <rect x="890" y="210" width="8" height="60" fill="url(#candleGradientUp)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3.6s" repeatCount="indefinite" />
+            </rect>
+            <rect x="960" y="150" width="8" height="40" fill="url(#candleGradientDown)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.5;0.3" dur="2.5s" repeatCount="indefinite" />
+            </rect>
+            <rect x="1030" y="290" width="8" height="75" fill="url(#candleGradientUp)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.6;0.3" dur="4.2s" repeatCount="indefinite" />
+            </rect>
+            <rect x="1100" y="200" width="8" height="55" fill="url(#candleGradientDown)" opacity="0.3">
+              <animate attributeName="opacity" values="0.3;0.5;0.3" dur="3.3s" repeatCount="indefinite" />
+            </rect>
+            
+            {/* Grid lines */}
+            <line x1="0" y1="400" x2="1200" y2="400" stroke="#30363D" strokeWidth="0.5" opacity="0.3" />
+            <line x1="0" y1="200" x2="1200" y2="200" stroke="#30363D" strokeWidth="0.5" opacity="0.3" />
+            <line x1="0" y1="600" x2="1200" y2="600" stroke="#30363D" strokeWidth="0.5" opacity="0.3" />
+          </g>
+        </svg>
+      </div>
+
+      <div className="relative z-10">
       <div>
         <h1 className="text-2xl font-bold text-white mb-2">Performance Dashboard</h1>
         <p className="text-gray-400">Track your trading performance and key metrics</p>
