@@ -13,6 +13,7 @@ import {
   Calculator
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import CandlestickBackground from './CandlestickBackground';
 
 const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -63,7 +64,8 @@ export function Layout() {
           <p className="text-xs text-gray-400 mt-1">Professional Edition</p>
         </div>
         
-        <nav className="flex-1 p-4 overflow-y-auto">
+        <nav className="flex-1 p-4 overflow-y-auto relative">
+          <CandlestickBackground />
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -72,7 +74,7 @@ export function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-all relative z-10 ${
                   isActive
                     ? 'bg-[#238636] text-white font-medium'
                     : 'text-gray-400 hover:bg-[#21262D] hover:text-gray-200'

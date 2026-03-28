@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import BullBearAnimation from '../components/BullBearAnimation';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -94,8 +95,9 @@ export default function Login() {
 
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B1220] p-4">
-      <div className="w-full max-w-md bg-[#161B22] border border-[#30363D] rounded-xl p-8 shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-[#0B1220] p-4 relative overflow-hidden">
+      <BullBearAnimation />
+      <div className="w-full max-w-md bg-[#161B22] border border-[#30363D] rounded-xl p-8 shadow-lg relative z-10">
         <h1 className="text-2xl font-bold text-white mb-2">
           {isSignUp ? 'Sign Up' : 'Login'} to Trading Journal
         </h1>
