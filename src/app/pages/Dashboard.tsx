@@ -269,8 +269,7 @@ export default function Dashboard() {
         </svg>
       </div>
 
-      <div className="relative z-10">
-      <div>
+      <div className="relative z-10 space-y-6">
         <h1 className="text-2xl font-bold text-white mb-2">Performance Dashboard</h1>
         <p className="text-gray-400">Track your trading performance and key metrics</p>
       </div>
