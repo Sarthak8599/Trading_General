@@ -11,6 +11,7 @@ import TradeHistory from "./pages/TradeHistory";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import CurrencyConverter from "./pages/CurrencyConverter";
+import MonthlyCalendar from "./pages/MonthlyCalendar";
 
 export const router = createBrowserRouter([
   {
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Dashboard },
       { path: "trade-journal", Component: TradeJournal },
+      { path: "monthly-calendar", Component: MonthlyCalendar },
       { path: "best-trading-days", Component: BestTradingDays },
       { path: "strategy-analysis", Component: StrategyAnalysis },
       { path: "capital-risk", Component: CapitalRisk },

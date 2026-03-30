@@ -10,13 +10,15 @@ import {
   History,
   Settings,
   User,
-  Calculator
+  Calculator,
+  CalendarDays
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/trade-journal', label: 'Trade Journal', icon: BookOpen },
+  { path: '/monthly-calendar', label: 'Monthly Calendar', icon: CalendarDays },
   { path: '/best-trading-days', label: 'Best Trading Days', icon: Calendar },
   { path: '/strategy-analysis', label: 'Strategy Analysis', icon: Target },
   { path: '/capital-risk', label: 'Capital & Risk', icon: Shield },
