@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { Search, Filter, Plus, Upload, TrendingUp, TrendingDown, Trash2, Download, Edit3 } from 'lucide-react';
+import { Search, Filter, Plus, Upload, TrendingUp, TrendingDown, Trash2, Download, Edit3, FileUp } from 'lucide-react';
 import { Trade } from '../data/mockData';
 import { TradeService } from '../../lib/tradeService';
 
@@ -13,6 +13,9 @@ export default function TradeJournal() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editTradeId, setEditTradeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importPreview, setImportPreview] = useState<Trade[]>([]);
 
   // Load trades from Supabase on component mount
   useEffect(() => {
@@ -274,6 +277,126 @@ export default function TradeJournal() {
     link.click();
   };
 
+  const parseCSV = (csvText: string): Trade[] => {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const rows = lines.slice(1);
+
+    const parsedTrades: Trade[] = [];
+    
+    rows.forEach((row, index) => {
+      try {
+        const values = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
+        const cleanValues = values.map(v => v.trim().replace(/^"|"$/g, ''));
+        
+        if (cleanValues.length >= 14) {
+          const trade: Trade = {
+            id: `import-${Date.now()}-${index}`,
+            date: cleanValues[0] || '',
+            time: cleanValues[1] || '',
+            day: cleanValues[2] || '',
+            tradeName: cleanValues[3] || '',
+            symbol: cleanValues[4] as any || 'NIFTY',
+            optionType: cleanValues[5] as any || 'CE',
+            strikePrice: parseFloat(cleanValues[6]) || 0,
+            strategyName: cleanValues[7] || '',
+            entryPrice: parseFloat(cleanValues[8]) || 0,
+            exitPrice: parseFloat(cleanValues[9]) || 0,
+            quantity: parseInt(cleanValues[10]) || 0,
+            lotSize: 1,
+            stopLoss: 0,
+            target: 0,
+            riskAmount: 0,
+            riskRewardRatio: cleanValues[11] || '1:1',
+            profitLoss: parseFloat(cleanValues[12]) || 0,
+            tradeResult: cleanValues[13] as any || 'Win',
+            mistakeTag: cleanValues[14] || '',
+            emotionTag: cleanValues[15] || '',
+            notes: cleanValues[16] || '',
+          };
+          
+          parsedTrades.push(trade);
+        }
+      } catch (error) {
+        console.error(`Error parsing row ${index + 1}:`, error);
+      }
+    });
+
+    return parsedTrades;
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      alert('Please upload a CSV file');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const csvText = e.target?.result as string;
+      const parsedTrades = parseCSV(csvText);
+      
+      if (parsedTrades.length === 0) {
+        alert('No valid trades found in CSV file');
+        return;
+      }
+
+      setImportPreview(parsedTrades);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmImport = async () => {
+    if (importPreview.length === 0) return;
+
+    try {
+      setImporting(true);
+      
+      for (const trade of importPreview) {
+        const tradeData = {
+          date: trade.date,
+          time: trade.time,
+          day: trade.day,
+          trade_name: trade.tradeName,
+          symbol: trade.symbol,
+          option_type: trade.optionType,
+          strike_price: trade.strikePrice,
+          strategy_name: trade.strategyName,
+          entry_price: trade.entryPrice,
+          exit_price: trade.exitPrice,
+          quantity: trade.quantity,
+          lot_size: trade.lotSize,
+          stop_loss: trade.stopLoss,
+          target: trade.target,
+          risk_amount: trade.riskAmount,
+          risk_reward_ratio: trade.riskRewardRatio,
+          profit_loss: trade.profitLoss,
+          trade_result: trade.tradeResult,
+          mistake_tag: trade.mistakeTag,
+          emotionTag: trade.emotionTag,
+          notes: trade.notes,
+        };
+        
+        await TradeService.createTrade(tradeData);
+      }
+
+      await loadTrades();
+      setShowImportDialog(false);
+      setImportPreview([]);
+      alert(`Successfully imported ${importPreview.length} trades!`);
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('Failed to import trades. Please check the CSV format and try again.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -285,6 +408,10 @@ export default function TradeJournal() {
           <button onClick={exportToCsv} className="flex items-center gap-2 px-4 py-2 bg-[#0B55D0] hover:bg-[#196add] text-white rounded-lg transition-colors">
             <Download size={18} />
             Export CSV
+          </button>
+          <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 px-4 py-2 bg-[#6f42c1] hover:bg-[#7950f2] text-white rounded-lg transition-colors">
+            <FileUp size={18} />
+            Import CSV
           </button>
           <button onClick={handleAddNewTrade} className="flex items-center gap-2 px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-white rounded-lg transition-colors">
             <Plus size={18} />
@@ -573,6 +700,106 @@ export default function TradeJournal() {
       {!loading && !error && (
         <div className="text-sm text-gray-400">
           Showing {filteredTrades.length} of {trades.length} trades
+        </div>
+      )}
+
+      {/* Import CSV Dialog */}
+      {showImportDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-white mb-4">Import CSV File</h2>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Select CSV File
+              </label>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="w-full px-4 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#238636] file:text-white hover:file:bg-[#2ea043]"
+              />
+            </div>
+
+            {importPreview.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  Preview ({importPreview.length} trades found)
+                </h3>
+                <div className="bg-[#0D1117] border border-[#30363D] rounded-lg p-4 max-h-60 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#30363D]">
+                        <th className="text-left py-2 text-gray-400">Date</th>
+                        <th className="text-left py-2 text-gray-400">Symbol</th>
+                        <th className="text-left py-2 text-gray-400">Strategy</th>
+                        <th className="text-left py-2 text-gray-400">P&L</th>
+                        <th className="text-left py-2 text-gray-400">Result</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importPreview.slice(0, 10).map((trade, index) => (
+                        <tr key={index} className="border-b border-[#30363D]/30">
+                          <td className="py-2 text-gray-300">{trade.date}</td>
+                          <td className="py-2 text-gray-300">{trade.symbol}</td>
+                          <td className="py-2 text-gray-300">{trade.strategyName}</td>
+                          <td className={`py-2 font-semibold ${trade.profitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {trade.profitLoss >= 0 ? '+' : ''}₹{Math.abs(trade.profitLoss)}
+                          </td>
+                          <td className="py-2">
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              trade.tradeResult === 'Win' 
+                                ? 'bg-green-900/30 text-green-400' 
+                                : 'bg-red-900/30 text-red-400'
+                            }`}>
+                              {trade.tradeResult}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {importPreview.length > 10 && (
+                        <tr>
+                          <td colSpan={5} className="py-2 text-center text-gray-400">
+                            ... and {importPreview.length - 10} more trades
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+              <p className="text-sm text-blue-300">
+                <strong>CSV Format:</strong> Date, Time, Day, Trade Name, Symbol, Type, Strike, Strategy, Entry, Exit, Qty, R:R, P&L, Result, Mistake, Emotion, Notes
+              </p>
+              <p className="text-xs text-blue-400 mt-1">
+                Export a CSV first to see the correct format
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowImportDialog(false);
+                  setImportPreview([]);
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              {importPreview.length > 0 && (
+                <button
+                  onClick={handleConfirmImport}
+                  disabled={importing}
+                  className="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {importing ? 'Importing...' : `Import ${importPreview.length} Trades`}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
