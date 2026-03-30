@@ -231,13 +231,39 @@ export default function TradeJournal() {
       'Date', 'Time', 'Day', 'Trade Name', 'Symbol', 'Type', 'Strike', 'Strategy', 'Entry', 'Exit', 'Qty', 'R:R', 'P&L', 'Result', 'Mistake', 'Emotion', 'Notes'
     ];
 
+    const formatDateForExcel = (dateStr: string) => {
+      if (!dateStr) return '';
+      // Convert YYYY-MM-DD to DD/MM/YYYY format for better Excel compatibility
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return dateStr;
+    };
+
     const rows = trades.map(t => [
-      t.date, t.time, t.day, t.tradeName || '', t.symbol, t.optionType, t.strikePrice, t.strategyName,
-      t.entryPrice, t.exitPrice, t.quantity, t.riskRewardRatio, t.profitLoss, t.tradeResult,
-      t.mistakeTag || '', t.emotionTag || '', t.notes || ''
+      formatDateForExcel(t.date),
+      t.time,
+      t.day,
+      t.tradeName || '',
+      t.symbol,
+      t.optionType,
+      t.strikePrice,
+      t.strategyName,
+      t.entryPrice,
+      t.exitPrice,
+      t.quantity,
+      t.riskRewardRatio,
+      t.profitLoss,
+      t.tradeResult,
+      t.mistakeTag || '',
+      t.emotionTag || '',
+      `"${(t.notes || '').replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = [headers, ...rows]
+    // Add UTF-8 BOM for Excel to recognize special characters
+    const BOM = '\uFEFF';
+    const csvContent = BOM + [headers, ...rows]
       .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
