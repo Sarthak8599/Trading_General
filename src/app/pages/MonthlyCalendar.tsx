@@ -49,6 +49,18 @@ export default function MonthlyCalendar() {
         notes: dbTrade.notes || '',
       }));
       setTrades(mappedData);
+      
+      // Set calendar to month of most recent trade
+      if (mappedData.length > 0) {
+        const sortedDates = mappedData.map(t => t.date).sort();
+        const mostRecentDate = sortedDates[sortedDates.length - 1];
+        if (mostRecentDate) {
+          const [year, month] = mostRecentDate.split('-').map(Number);
+          if (year && month) {
+            setCurrentDate(new Date(year, month - 1, 1));
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed to load trades:', err);
     } finally {
@@ -56,24 +68,14 @@ export default function MonthlyCalendar() {
     }
   };
 
-  // Aggregate trades by date - handle both YYYY-MM-DD and DD/MM/YYYY formats
+  // Aggregate trades by date
   const tradesByDate = trades.reduce((acc, trade) => {
-    // Normalize date to YYYY-MM-DD format
-    let normalizedDate = trade.date;
-    if (trade.date.includes('/')) {
-      // Convert DD/MM/YYYY to YYYY-MM-DD
-      const parts = trade.date.split('/');
-      if (parts.length === 3) {
-        normalizedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-      }
+    if (!acc[trade.date]) {
+      acc[trade.date] = { profitLoss: 0, tradeCount: 0, trades: [] };
     }
-    
-    if (!acc[normalizedDate]) {
-      acc[normalizedDate] = { profitLoss: 0, tradeCount: 0, trades: [] };
-    }
-    acc[normalizedDate].profitLoss += trade.profitLoss;
-    acc[normalizedDate].tradeCount += 1;
-    acc[normalizedDate].trades.push(trade);
+    acc[trade.date].profitLoss += trade.profitLoss;
+    acc[trade.date].tradeCount += 1;
+    acc[trade.date].trades.push(trade);
     return acc;
   }, {} as Record<string, { profitLoss: number; tradeCount: number; trades: Trade[] }>);
 
@@ -166,7 +168,7 @@ export default function MonthlyCalendar() {
 
   const selectedDayData = selectedDate ? tradesByDate[selectedDate] : null;
 
-  // Calculate monthly totals - handle both date formats
+  // Calculate monthly totals
   const monthlyTrades = Object.entries(tradesByDate).filter(([dateStr]) => {
     const date = new Date(dateStr);
     return date.getMonth() === month && date.getFullYear() === year;
@@ -190,6 +192,12 @@ export default function MonthlyCalendar() {
         </div>
         
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setCurrentDate(new Date())}
+            className="px-3 py-2 bg-[#21262D] hover:bg-[#30363D] text-gray-300 rounded-lg text-sm transition-colors"
+          >
+            Today
+          </button>
           <div className="flex items-center gap-2 bg-[#161B22] border border-[#30363D] rounded-lg p-1">
             <button
               onClick={() => navigateMonth('prev')}
