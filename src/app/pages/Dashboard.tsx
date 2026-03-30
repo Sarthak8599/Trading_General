@@ -8,9 +8,12 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Target, AlertTriangle, Brain, Heart, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Target, AlertTriangle, Brain, Frown, Smile, Meh, Activity } from 'lucide-react';
 import { TradeService } from '../../lib/tradeService';
 import { Trade } from '../data/mockData';
 
@@ -88,31 +91,52 @@ export default function Dashboard() {
   const profitFactor = grossLoss === 0 ? (totalProfit || 0) : Number((grossProfit / Math.abs(grossLoss)).toFixed(2));
   const expectancy = totalTrades ? Number((totalProfit / totalTrades).toFixed(2)) : 0;
 
-  // Calculate mistake and emotion analytics
+  const today = new Date().toISOString().slice(0, 10);
+  const oneWeekAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  // Calculate today's trades count for overtrading warning
+  const todayTrades = trades.filter(trade => trade.date === today);
+  const todayTradeCount = todayTrades.length;
+  const isOvertrading = todayTradeCount >= 3;
+
+  // Calculate repetitive mistakes
   const mistakesCount = trades.reduce((acc, trade) => {
-    if (trade.mistakeTag && trade.mistakeTag.trim() !== '' && trade.mistakeTag.toLowerCase() !== 'no') {
+    if (trade.mistakeTag && trade.mistakeTag.trim() !== '' && trade.mistakeTag !== 'no') {
       acc[trade.mistakeTag] = (acc[trade.mistakeTag] || 0) + 1;
     }
     return acc;
   }, {} as Record<string, number>);
 
+  const sortedMistakes = Object.entries(mistakesCount)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
+
+  // Calculate emotions distribution
   const emotionsCount = trades.reduce((acc, trade) => {
-    if (trade.emotionTag && trade.emotionTag.trim() !== '' && trade.emotionTag.toLowerCase() !== 'no') {
+    if (trade.emotionTag && trade.emotionTag.trim() !== '' && trade.emotionTag !== 'no') {
       acc[trade.emotionTag] = (acc[trade.emotionTag] || 0) + 1;
     }
     return acc;
   }, {} as Record<string, number>);
 
-  const sortedMistakes = Object.entries(mistakesCount).sort(([,a], [,b]) => b - a).slice(0, 5);
-  const sortedEmotions = Object.entries(emotionsCount).sort(([,a], [,b]) => b - a).slice(0, 5);
+  const sortedEmotions = Object.entries(emotionsCount)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
 
-  // Today's trades count for overtrading warning
-  const todayTradesCount = trades.filter(t => t.date === today).length;
-  const maxDailyTrades = 3;
-  const isOvertrading = todayTradesCount >= maxDailyTrades;
-  const oneWeekAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  const emotionColors: Record<string, string> = {
+    'Fear': '#FF5252',
+    'Greed': '#FFD600',
+    'Hope': '#00C853',
+    'Regret': '#FF6B6B',
+    'Confidence': '#00C853',
+    'Anxiety': '#FF9800',
+    'Excitement': '#2196F3',
+    'Frustration': '#F44336',
+    'Calm': '#4CAF50',
+    'Nervous': '#FF5722'
+  };
 
   const dailyGroups = new Map<string, number>();
   const weeklyGroups = new Map<string, number>();
@@ -303,60 +327,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Overtrading Warning */}
-      {todayTradesCount >= maxDailyTrades && (
-        <div className="bg-gradient-to-r from-red-900/30 to-orange-900/30 border-2 border-red-500/50 rounded-xl p-5 animate-pulse">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-500/20 rounded-full">
-              <AlertTriangle className="w-8 h-8 text-red-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-red-400 mb-1">
-                ⚠️ Overtrading Alert - {todayTradesCount} Trades Completed!
-              </h3>
-              <p className="text-gray-300">
-                You have reached your daily limit of {maxDailyTrades} trades. Stop trading for today to avoid emotional decisions and preserve your capital.
-              </p>
-            </div>
-            <div className="text-center px-4 py-2 bg-red-500/20 rounded-lg">
-              <div className="text-xs text-gray-400">Daily Limit</div>
-              <div className="text-2xl font-bold text-red-400">{todayTradesCount}/{maxDailyTrades}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Today's Trade Count Indicator */}
-      {todayTradesCount > 0 && todayTradesCount < maxDailyTrades && (
-        <div className="bg-gradient-to-r from-blue-900/20 to-cyan-900/20 border border-blue-500/30 rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Activity className="w-6 h-6 text-blue-400" />
-              <span className="text-gray-300">Today's Trades</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {[...Array(maxDailyTrades)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                    i < todayTradesCount
-                      ? 'bg-green-500 text-white'
-                      : 'bg-[#21262D] text-gray-500 border border-[#30363D]'
-                  }`}
-                >
-                  {i + 1}
-                </div>
-              ))}
-            </div>
-            <span className="text-sm text-gray-400">
-              {maxDailyTrades - todayTradesCount} trade{maxDailyTrades - todayTradesCount !== 1 ? 's' : ''} remaining
-            </span>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-4 gap-6">
         {metrics.map(metric => {
+          const Icon = metric.icon;
           return (
             <div key={metric.title} className="bg-[#161B22] border border-[#30363D] rounded-lg p-6">
               <div className="flex items-center justify-between mb-3">
@@ -433,73 +406,164 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Mistakes & Emotions Analysis */}
-      {(sortedMistakes.length > 0 || sortedEmotions.length > 0) && (
-        <div className="grid grid-cols-2 gap-6">
-          {/* Repeated Mistakes Section */}
-          {sortedMistakes.length > 0 && (
-            <div className="bg-gradient-to-br from-[#161B22] to-[#1a1f2e] border border-[#30363D] rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 bg-orange-500/20 rounded-lg">
-                  <Brain className="w-6 h-6 text-orange-400" />
-                </div>
-                <h3 className="text-lg font-bold text-white">Repeated Mistakes</h3>
-              </div>
-              <div className="space-y-3">
-                {sortedMistakes.map(([mistake, count], index) => (
-                  <div key={mistake} className="flex items-center justify-between p-3 bg-[#0D1117] rounded-lg border border-[#21262D] hover:border-orange-500/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold flex items-center justify-center">
-                        {index + 1}
-                      </span>
-                      <span className="text-gray-300 font-medium">{mistake}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-orange-400">{count}</span>
-                      <span className="text-xs text-gray-500">times</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-4">
-                💡 Tip: Focus on eliminating your top mistake to improve performance
+      {/* Overtrading Warning Banner */}
+      {isOvertrading && (
+        <div className="bg-gradient-to-r from-orange-600/20 via-red-600/20 to-orange-600/20 border-2 border-orange-500 rounded-xl p-4 animate-pulse">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-orange-500/20 rounded-xl">
+              <AlertTriangle className="w-8 h-8 text-orange-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-orange-400 mb-1">
+                ⚠️ Daily Trade Limit Reached!
+              </h3>
+              <p className="text-gray-300">
+                You have completed {todayTradeCount} trades today. Stop trading now to avoid overtrading and emotional decisions.
               </p>
             </div>
-          )}
+            <div className="text-right">
+              <div className="text-3xl font-bold text-orange-400">{todayTradeCount}/3</div>
+              <div className="text-sm text-orange-300">trades done</div>
+            </div>
+          </div>
+        </div>
+      )}
 
-          {/* Emotions Tracking Section */}
-          {sortedEmotions.length > 0 && (
-            <div className="bg-gradient-to-br from-[#161B22] to-[#1a1f2e] border border-[#30363D] rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 bg-pink-500/20 rounded-lg">
-                  <Heart className="w-6 h-6 text-pink-400" />
-                </div>
-                <h3 className="text-lg font-bold text-white">Emotions While Trading</h3>
-              </div>
-              <div className="space-y-3">
-                {sortedEmotions.map(([emotion, count], index) => (
-                  <div key={emotion} className="flex items-center justify-between p-3 bg-[#0D1117] rounded-lg border border-[#21262D] hover:border-pink-500/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-pink-500/20 text-pink-400 text-xs font-bold flex items-center justify-center">
-                        {index + 1}
-                      </span>
-                      <span className="text-gray-300 font-medium">{emotion}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-pink-400">{count}</span>
-                      <span className="text-xs text-gray-500">times</span>
-                    </div>
+      {/* Today's Trade Counter */}
+      {!isOvertrading && todayTradeCount > 0 && (
+        <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Activity className="w-6 h-6 text-blue-400" />
+              <span className="text-gray-300">Today's Trades</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {[1, 2, 3].map((num) => (
+                  <div
+                    key={num}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
+                      num <= todayTradeCount
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-[#0D1117] text-gray-500 border border-[#30363D]'
+                    }`}
+                  >
+                    {num}
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-4">
-                💡 Tip: Avoid trading when experiencing negative emotions
-              </p>
+              <span className="text-sm text-gray-400 ml-2">
+                {todayTradeCount < 3 ? `${3 - todayTradeCount} more allowed` : 'Limit reached'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mistakes & Emotions Analysis */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Repetitive Mistakes */}
+        <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-red-500/10 rounded-xl">
+              <Brain className="w-6 h-6 text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Repetitive Mistakes</h3>
+              <p className="text-sm text-gray-400">Mistakes you make most often</p>
+            </div>
+          </div>
+          
+          {sortedMistakes.length > 0 ? (
+            <div className="space-y-3">
+              {sortedMistakes.map(([mistake, count], index) => (
+                <div key={mistake} className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400 font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-white font-medium capitalize">{mistake}</span>
+                      <span className="text-red-400 font-bold">{count} times</span>
+                    </div>
+                    <div className="h-2 bg-[#0D1117] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-red-500 to-red-400 rounded-full transition-all duration-500"
+                        style={{ width: `${(count / sortedMistakes[0][1]) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Brain className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p>No mistakes recorded yet</p>
+              <p className="text-sm">Start tagging mistakes in your trades</p>
             </div>
           )}
         </div>
-      )}
-      {/* Performance Stats */}
+
+        {/* Emotions Analysis */}
+        <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-blue-500/10 rounded-xl">
+              <Meh className="w-6 h-6 text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Emotions Tracker</h3>
+              <p className="text-sm text-gray-400">Your emotional patterns while trading</p>
+            </div>
+          </div>
+          
+          {sortedEmotions.length > 0 ? (
+            <div className="space-y-3">
+              {sortedEmotions.map(([emotion, count], index) => {
+                const color = emotionColors[emotion] || '#58A6FF';
+                const Icon = emotion === 'Confidence' || emotion === 'Calm' || emotion === 'Hope' 
+                  ? Smile 
+                  : emotion === 'Fear' || emotion === 'Anxiety' || emotion === 'Frustration' || emotion === 'Nervous'
+                    ? Frown 
+                    : Meh;
+                
+                return (
+                  <div key={emotion} className="flex items-center gap-4">
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${color}20` }}
+                    >
+                      <Icon className="w-4 h-4" style={{ color }} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-white font-medium">{emotion}</span>
+                        <span className="font-bold" style={{ color }}>{count} trades</span>
+                      </div>
+                      <div className="h-2 bg-[#0D1117] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${(count / sortedEmotions[0][1]) * 100}%`,
+                            backgroundColor: color
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Meh className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p>No emotions recorded yet</p>
+              <p className="text-sm">Start tagging emotions in your trades</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-4 gap-6">
         {performanceStats.map(stat => {
           const Icon = stat.icon;
