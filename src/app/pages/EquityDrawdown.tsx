@@ -18,6 +18,25 @@ export default function EquityDrawdown() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get starting capital from localStorage (saved in Capital & Risk page)
+  const [startingCapital, setStartingCapital] = useState(() => {
+    const saved = localStorage.getItem('tradingCapital');
+    return saved ? Number(saved) : 100000;
+  });
+
+  // Listen for capital changes from Capital & Risk page
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('tradingCapital');
+      if (saved) {
+        setStartingCapital(Number(saved));
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   useEffect(() => {
     const loadTrades = async () => {
@@ -62,11 +81,10 @@ export default function EquityDrawdown() {
     loadTrades();
   }, []);
 
-  // Calculate equity curve from trades
+  // Calculate equity curve from trades using saved starting capital
   const sortedTrades = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const startingEquity = 100000; // Starting capital
-  let runningEquity = startingEquity;
-  let peakEquity = startingEquity;
+  let runningEquity = startingCapital;
+  let peakEquity = startingCapital;
 
   const equityCurve = sortedTrades.map(trade => {
     runningEquity += trade.profitLoss;
@@ -87,10 +105,10 @@ export default function EquityDrawdown() {
     };
   });
 
-  // Calculate metrics
-  const currentEquity = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].equity : startingEquity;
-  const totalReturn = currentEquity - startingEquity;
-  const returnPercentage = ((totalReturn / startingEquity) * 100).toFixed(2);
+  // Calculate metrics using starting capital
+  const currentEquity = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].equity : startingCapital;
+  const totalReturn = currentEquity - startingCapital;
+  const returnPercentage = ((totalReturn / startingCapital) * 100).toFixed(2);
   
   const maxDrawdown = drawdownData.length > 0 ? Math.min(...drawdownData.map(d => d.drawdown)) : 0;
   const currentDrawdown = drawdownData.length > 0 ? drawdownData[drawdownData.length - 1].drawdown : 0;
@@ -356,7 +374,7 @@ export default function EquityDrawdown() {
         <div className="grid grid-cols-4 gap-4">
           <div className="p-4 bg-[#0D1117] rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Starting Capital</div>
-            <div className="text-xl font-bold text-white">₹{startingEquity.toLocaleString()}</div>
+            <div className="text-xl font-bold text-white">₹{startingCapital.toLocaleString()}</div>
           </div>
           <div className="p-4 bg-[#0D1117] rounded-lg">
             <div className="text-sm text-gray-400 mb-1">Current Capital</div>
