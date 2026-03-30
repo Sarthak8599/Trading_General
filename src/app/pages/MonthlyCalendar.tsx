@@ -56,14 +56,24 @@ export default function MonthlyCalendar() {
     }
   };
 
-  // Aggregate trades by date
+  // Aggregate trades by date - handle both YYYY-MM-DD and DD/MM/YYYY formats
   const tradesByDate = trades.reduce((acc, trade) => {
-    if (!acc[trade.date]) {
-      acc[trade.date] = { profitLoss: 0, tradeCount: 0, trades: [] };
+    // Normalize date to YYYY-MM-DD format
+    let normalizedDate = trade.date;
+    if (trade.date.includes('/')) {
+      // Convert DD/MM/YYYY to YYYY-MM-DD
+      const parts = trade.date.split('/');
+      if (parts.length === 3) {
+        normalizedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
     }
-    acc[trade.date].profitLoss += trade.profitLoss;
-    acc[trade.date].tradeCount += 1;
-    acc[trade.date].trades.push(trade);
+    
+    if (!acc[normalizedDate]) {
+      acc[normalizedDate] = { profitLoss: 0, tradeCount: 0, trades: [] };
+    }
+    acc[normalizedDate].profitLoss += trade.profitLoss;
+    acc[normalizedDate].tradeCount += 1;
+    acc[normalizedDate].trades.push(trade);
     return acc;
   }, {} as Record<string, { profitLoss: number; tradeCount: number; trades: Trade[] }>);
 
@@ -156,7 +166,7 @@ export default function MonthlyCalendar() {
 
   const selectedDayData = selectedDate ? tradesByDate[selectedDate] : null;
 
-  // Calculate monthly totals
+  // Calculate monthly totals - handle both date formats
   const monthlyTrades = Object.entries(tradesByDate).filter(([dateStr]) => {
     const date = new Date(dateStr);
     return date.getMonth() === month && date.getFullYear() === year;
