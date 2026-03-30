@@ -7,13 +7,65 @@ export default function CapitalRisk() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [totalCapital, setTotalCapital] = useState(100000);
-  const [riskPerTrade, setRiskPerTrade] = useState(2);
-  const [maxDailyLoss, setMaxDailyLoss] = useState(5);
-  const [stopLossPoints, setStopLossPoints] = useState(50);
-  const [lotSizeCapital, setLotSizeCapital] = useState(100000);
-  const [lotSizeRisk, setLotSizeRisk] = useState(2);
-  const [lotSizeStopLoss, setLotSizeStopLoss] = useState(50);
+  
+  // Load saved settings from localStorage or use defaults
+  const [totalCapital, setTotalCapital] = useState(() => {
+    const saved = localStorage.getItem('tradingCapital');
+    return saved ? Number(saved) : 100000;
+  });
+  const [riskPerTrade, setRiskPerTrade] = useState(() => {
+    const saved = localStorage.getItem('riskPerTrade');
+    return saved ? Number(saved) : 2;
+  });
+  const [maxDailyLoss, setMaxDailyLoss] = useState(() => {
+    const saved = localStorage.getItem('maxDailyLoss');
+    return saved ? Number(saved) : 5;
+  });
+  const [stopLossPoints, setStopLossPoints] = useState(() => {
+    const saved = localStorage.getItem('stopLossPoints');
+    return saved ? Number(saved) : 50;
+  });
+  const [lotSizeCapital, setLotSizeCapital] = useState(() => {
+    const saved = localStorage.getItem('lotSizeCapital');
+    return saved ? Number(saved) : 100000;
+  });
+  const [lotSizeRisk, setLotSizeRisk] = useState(() => {
+    const saved = localStorage.getItem('lotSizeRisk');
+    return saved ? Number(saved) : 2;
+  });
+  const [lotSizeStopLoss, setLotSizeStopLoss] = useState(() => {
+    const saved = localStorage.getItem('lotSizeStopLoss');
+    return saved ? Number(saved) : 50;
+  });
+
+  // Save settings to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('tradingCapital', String(totalCapital));
+  }, [totalCapital]);
+
+  useEffect(() => {
+    localStorage.setItem('riskPerTrade', String(riskPerTrade));
+  }, [riskPerTrade]);
+
+  useEffect(() => {
+    localStorage.setItem('maxDailyLoss', String(maxDailyLoss));
+  }, [maxDailyLoss]);
+
+  useEffect(() => {
+    localStorage.setItem('stopLossPoints', String(stopLossPoints));
+  }, [stopLossPoints]);
+
+  useEffect(() => {
+    localStorage.setItem('lotSizeCapital', String(lotSizeCapital));
+  }, [lotSizeCapital]);
+
+  useEffect(() => {
+    localStorage.setItem('lotSizeRisk', String(lotSizeRisk));
+  }, [lotSizeRisk]);
+
+  useEffect(() => {
+    localStorage.setItem('lotSizeStopLoss', String(lotSizeStopLoss));
+  }, [lotSizeStopLoss]);
 
   useEffect(() => {
     const loadTrades = async () => {
