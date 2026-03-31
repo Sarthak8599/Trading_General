@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-import { Trophy, TrendingDown, Target } from 'lucide-react';
+import { Trophy, TrendingDown, Target, X, Calendar, ArrowRight, TrendingUp, TrendingUp as TrendingUpIcon } from 'lucide-react';
 import { TradeService } from '../../lib/tradeService';
 import { Trade } from '../data/mockData';
 
@@ -19,6 +19,8 @@ export default function StrategyAnalysis() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
+  const [showTradesModal, setShowTradesModal] = useState(false);
 
   useEffect(() => {
     const loadTrades = async () => {
@@ -63,6 +65,11 @@ export default function StrategyAnalysis() {
     loadTrades();
   }, []);
 
+  // Get trades for selected strategy
+  const strategyTrades = selectedStrategy 
+    ? trades.filter(trade => trade.strategyName === selectedStrategy)
+    : [];
+
   // Calculate strategy performance
   const strategyData = trades.reduce((acc, trade) => {
     const strategy = trade.strategyName;
@@ -99,6 +106,16 @@ export default function StrategyAnalysis() {
   const highestWinRate = strategyPerformance.length > 0 ? strategyPerformance.reduce((max, strat) => 
     strat.winRate > max.winRate ? strat : max
   ) : { strategy: 'N/A', profit: 0, trades: 0, winRate: 0, avgProfit: 0, profitFactor: 0 };
+
+  const handleStrategyClick = (strategy: string) => {
+    setSelectedStrategy(strategy);
+    setShowTradesModal(true);
+  };
+
+  const closeModal = () => {
+    setShowTradesModal(false);
+    setSelectedStrategy(null);
+  };
 
   if (loading) {
     return (
@@ -348,10 +365,13 @@ export default function StrategyAnalysis() {
               {strategyPerformance
                 .sort((a, b) => b.profit - a.profit)
                 .map((strategy, index) => (
-                  <tr key={strategy.strategy} className="hover:bg-[#0D1117] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-white">{strategy.strategy}</span>
+                  <tr key={strategy.strategy} className="hover:bg-[#0D1117] transition-colors cursor-pointer">
+                    <td className="px-6 py-4" onClick={() => handleStrategyClick(strategy.strategy)}>
+                      <div className="flex items-center gap-2 group">
+                        <span className="text-sm font-medium text-white group-hover:text-[#58A6FF] transition-colors cursor-pointer underline-offset-2 hover:underline">
+                          {strategy.strategy}
+                        </span>
+                        <ArrowRight className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -396,6 +416,139 @@ export default function StrategyAnalysis() {
           </table>
         </div>
       </div>
+
+      {/* Trades Modal */}
+      {showTradesModal && selectedStrategy && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#161B22] border border-[#30363D] rounded-xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#30363D] bg-[#0D1117]">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <Target className="w-6 h-6 text-[#58A6FF]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">{selectedStrategy}</h3>
+                  <p className="text-sm text-gray-400">{strategyTrades.length} trades found</p>
+                </div>
+              </div>
+              <button
+                onClick={closeModal}
+                className="p-2 hover:bg-[#30363D] rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto max-h-[70vh] p-6">
+              {strategyTrades.length > 0 ? (
+                <div className="space-y-3">
+                  {strategyTrades
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((trade, index) => (
+                      <div
+                        key={trade.id}
+                        className={`p-4 rounded-lg border transition-all hover:scale-[1.01] ${
+                          trade.profitLoss >= 0
+                            ? 'bg-gradient-to-r from-green-500/10 to-transparent border-green-500/30'
+                            : 'bg-gradient-to-r from-red-500/10 to-transparent border-red-500/30'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <span className="w-8 h-8 rounded-full bg-[#0D1117] flex items-center justify-center text-sm font-bold text-gray-400">
+                              {index + 1}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white font-semibold">{trade.symbol}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                  trade.optionType === 'CE' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {trade.optionType}
+                                </span>
+                                <span className="text-gray-400 text-sm">@{trade.strikePrice}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Calendar className="w-3 h-3 text-gray-500" />
+                                <span className="text-sm text-gray-400">{trade.date}</span>
+                                <span className="text-gray-500">•</span>
+                                <span className="text-sm text-gray-400">{trade.time}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <div className="text-xs text-gray-500">Entry → Exit</div>
+                              <div className="text-sm text-gray-300">₹{trade.entryPrice} → ₹{trade.exitPrice}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`text-xl font-bold ${trade.profitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {trade.profitLoss >= 0 ? '+' : '-'}₹{Math.abs(trade.profitLoss).toLocaleString()}
+                              </div>
+                              <div className="flex items-center gap-1 justify-end">
+                                {trade.profitLoss >= 0 ? (
+                                  <TrendingUp className="w-3 h-3 text-green-400" />
+                                ) : (
+                                  <TrendingDown className="w-3 h-3 text-red-400" />
+                                )}
+                                <span className={`text-xs ${trade.profitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  {trade.profitLoss >= 0 ? 'Win' : 'Loss'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {(trade.mistakeTag || trade.emotionTag || trade.notes) && (
+                          <div className="mt-3 pt-3 border-t border-[#30363D]/50 flex flex-wrap gap-2">
+                            {trade.mistakeTag && trade.mistakeTag !== 'no' && (
+                              <span className="px-2 py-1 bg-red-500/10 text-red-400 text-xs rounded">
+                                Mistake: {trade.mistakeTag}
+                              </span>
+                            )}
+                            {trade.emotionTag && trade.emotionTag !== 'no' && (
+                              <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded">
+                                Emotion: {trade.emotionTag}
+                              </span>
+                            )}
+                            {trade.notes && (
+                              <span className="px-2 py-1 bg-gray-700/30 text-gray-400 text-xs rounded truncate max-w-md">
+                                {trade.notes}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Target className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>No trades found for this strategy</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-[#30363D] bg-[#0D1117] flex justify-between items-center">
+              <div className="text-sm text-gray-400">
+                Total P&L for <span className="text-white font-semibold">{selectedStrategy}</span>:
+                <span className={`ml-2 font-bold ${strategyTrades.reduce((acc, t) => acc + t.profitLoss, 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {strategyTrades.reduce((acc, t) => acc + t.profitLoss, 0) >= 0 ? '+' : '-'}
+                  ₹{Math.abs(strategyTrades.reduce((acc, t) => acc + t.profitLoss, 0)).toLocaleString()}
+                </span>
+              </div>
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 bg-[#30363D] hover:bg-[#3D444D] text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

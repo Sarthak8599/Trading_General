@@ -9,7 +9,7 @@ export default function CapitalRisk() {
   const [error, setError] = useState<string | null>(null);
   
   // Load saved settings from localStorage or use defaults
-  const [totalCapital, setTotalCapital] = useState(() => {
+  const [baseCapital, setBaseCapital] = useState(() => {
     const saved = localStorage.getItem('tradingCapital');
     return saved ? Number(saved) : 100000;
   });
@@ -40,8 +40,8 @@ export default function CapitalRisk() {
 
   // Save settings to localStorage when they change
   useEffect(() => {
-    localStorage.setItem('tradingCapital', String(totalCapital));
-  }, [totalCapital]);
+    localStorage.setItem('tradingCapital', String(baseCapital));
+  }, [baseCapital]);
 
   useEffect(() => {
     localStorage.setItem('riskPerTrade', String(riskPerTrade));
@@ -110,7 +110,13 @@ export default function CapitalRisk() {
     loadTrades();
   }, []);
 
-  // Calculations
+  // Calculate total P&L from all trades
+  const totalPnL = trades.reduce((acc, trade) => acc + trade.profitLoss, 0);
+  
+  // Current capital = base capital + total P&L
+  const totalCapital = baseCapital + totalPnL;
+
+  // Calculations using current capital (base + P&L)
   const riskAmount = (totalCapital * riskPerTrade) / 100;
   const maxDailyLossAmount = (totalCapital * maxDailyLoss) / 100;
   const suggestedStopLoss = riskAmount / 0.02; // Example calculation
@@ -181,17 +187,33 @@ export default function CapitalRisk() {
             <h3 className="text-lg font-semibold text-white">Risk Settings</h3>
           </div>
 
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="p-4 bg-[#0D1117] rounded-lg border border-[#30363D]">
+              <div className="text-sm text-gray-400 mb-1">Base Capital (Your Input)</div>
+              <div className="text-2xl font-bold text-white">₹{baseCapital.toLocaleString()}</div>
+            </div>
+            <div className={`p-4 rounded-lg border ${
+              totalPnL >= 0 ? 'bg-green-900/20 border-green-600' : 'bg-red-900/20 border-red-600'
+            }`}>
+              <div className="text-sm text-gray-400 mb-1">Total P&L from Trades</div>
+              <div className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {totalPnL >= 0 ? '+' : '-'}₹{Math.abs(totalPnL).toLocaleString()}
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Total Trading Capital (₹)
+                Your Trading Capital (₹)
               </label>
               <input
                 type="number"
-                value={totalCapital}
-                onChange={(e) => setTotalCapital(Number(e.target.value))}
+                value={baseCapital}
+                onChange={(e) => setBaseCapital(Number(e.target.value))}
                 className="w-full px-4 py-3 bg-[#0D1117] border border-[#30363D] rounded-lg text-white focus:outline-none focus:border-[#238636]"
               />
+              <p className="text-xs text-gray-500 mt-1">This is your initial capital. Current capital includes P&L.</p>
             </div>
 
             <div>
@@ -248,9 +270,20 @@ export default function CapitalRisk() {
           </div>
 
           <div className="space-y-4">
+            <div className="p-4 bg-green-900/20 border border-green-600 rounded-lg">
+              <div className="text-sm text-gray-400 mb-1">Current Capital (Base + P&L)</div>
+              <div className="text-3xl font-bold text-green-400">₹{totalCapital.toLocaleString()}</div>
+              <div className="text-xs text-gray-500 mt-1">Automatically updated based on your trades</div>
+            </div>
+
             <div className="p-4 bg-[#0D1117] rounded-lg border border-[#30363D]">
               <div className="text-sm text-gray-400 mb-1">Suggested Risk Amount Per Trade</div>
               <div className="text-2xl font-bold text-[#00C853]">₹{riskAmount.toLocaleString()}</div>
+            </div>
+
+            <div className="p-4 bg-[#0D1117] rounded-lg border border-[#30363D]">
+              <div className="text-sm text-gray-400 mb-1">Based on Current Capital</div>
+              <div className="text-xs text-gray-500">₹{totalCapital.toLocaleString()} × {riskPerTrade}%</div>
             </div>
 
             <div className="p-4 bg-[#0D1117] rounded-lg border border-[#30363D]">
@@ -298,7 +331,12 @@ export default function CapitalRisk() {
             <input
               type="number"
               value={lotSizeCapital}
-              onChange={(e) => setLotSizeCapital(Number(e.target.value))}
+              onChange={(e) => {
+                const newVal = Number(e.target.value);
+                setLotSizeCapital(newVal);
+                // Also update base capital when lot size capital changes
+                setBaseCapital(newVal);
+              }}
               className="w-full px-4 py-3 bg-[#0D1117] border border-[#30363D] rounded-lg text-white focus:outline-none focus:border-[#238636]"
             />
           </div>
