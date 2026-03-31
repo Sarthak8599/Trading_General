@@ -349,16 +349,16 @@ export default function StrategyAnalysis() {
         <div className="px-6 py-4 border-b border-[#30363D]">
           <h3 className="text-lg font-semibold text-white">Detailed Strategy Statistics</h3>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
           <table className="w-full">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-[#0D1117] border-b border-[#30363D]">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Strategy</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Total Profit</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Trades</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Win Rate</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Avg Profit</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Performance</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Strategy</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Total Profit</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Trades</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Win Rate</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Avg Profit</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Performance</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#30363D]">
