@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-import { Trophy, TrendingDown, Target, X, Calendar, ArrowRight, TrendingUp, BarChart3, PieChart, Activity, Percent, IndianRupee, Medal, AlertTriangle, Eye } from 'lucide-react';
+import { Trophy, TrendingDown, Target, X, Calendar, ArrowRight, TrendingUp, BarChart3, PieChart, Activity, Percent, IndianRupee, Medal, AlertTriangle, Eye, Clock, CheckCircle, Sun } from 'lucide-react';
 import { TradeService } from '../../lib/tradeService';
 import { Trade } from '../data/mockData';
 
@@ -70,14 +70,41 @@ export default function StrategyAnalysis() {
     ? trades.filter(trade => trade.strategyName === selectedStrategy)
     : [];
 
-  // Calculate strategy performance
+  // Calculate strategy performance with day and time analysis
   const strategyData = trades.reduce((acc, trade) => {
     const strategy = trade.strategyName;
     if (!acc[strategy]) {
-      acc[strategy] = { profit: 0, trades: 0, wins: 0, losses: 0, totalProfit: 0, totalLoss: 0 };
+      acc[strategy] = { 
+        profit: 0, trades: 0, wins: 0, losses: 0, totalProfit: 0, totalLoss: 0,
+        dayStats: {},
+        timeStats: {}
+      };
     }
     acc[strategy].profit += trade.profitLoss;
     acc[strategy].trades += 1;
+    
+    // Track day performance
+    const day = trade.day || new Date(trade.date).toLocaleDateString('en-US', { weekday: 'long' });
+    if (!acc[strategy].dayStats[day]) {
+      acc[strategy].dayStats[day] = { profit: 0, wins: 0, trades: 0 };
+    }
+    acc[strategy].dayStats[day].profit += trade.profitLoss;
+    acc[strategy].dayStats[day].trades += 1;
+    if (trade.profitLoss > 0) {
+      acc[strategy].dayStats[day].wins += 1;
+    }
+    
+    // Track time performance (group by hour)
+    const hour = trade.time ? trade.time.split(':')[0] + ':00' : 'N/A';
+    if (!acc[strategy].timeStats[hour]) {
+      acc[strategy].timeStats[hour] = { profit: 0, wins: 0, trades: 0 };
+    }
+    acc[strategy].timeStats[hour].profit += trade.profitLoss;
+    acc[strategy].timeStats[hour].trades += 1;
+    if (trade.profitLoss > 0) {
+      acc[strategy].timeStats[hour].wins += 1;
+    }
+    
     if (trade.profitLoss > 0) {
       acc[strategy].wins += 1;
       acc[strategy].totalProfit += trade.profitLoss;
@@ -86,16 +113,35 @@ export default function StrategyAnalysis() {
       acc[strategy].totalLoss += Math.abs(trade.profitLoss);
     }
     return acc;
-  }, {} as Record<string, { profit: number; trades: number; wins: number; losses: number; totalProfit: number; totalLoss: number }>);
+  }, {} as Record<string, { 
+    profit: number; trades: number; wins: number; losses: number; totalProfit: number; totalLoss: number;
+    dayStats: Record<string, { profit: number; wins: number; trades: number }>;
+    timeStats: Record<string, { profit: number; wins: number; trades: number }>;
+  }>);
 
-  const strategyPerformance = Object.entries(strategyData).map(([strategy, data]) => ({
-    strategy,
-    profit: data.profit,
-    trades: data.trades,
-    winRate: data.trades > 0 ? Math.round((data.wins / data.trades) * 100) : 0,
-    avgProfit: data.trades > 0 ? data.profit / data.trades : 0,
-    profitFactor: data.totalLoss > 0 ? data.totalProfit / data.totalLoss : data.totalProfit > 0 ? data.totalProfit : 0,
-  }));
+  const strategyPerformance = Object.entries(strategyData).map(([strategy, data]) => {
+    // Find best day (most profitable)
+    const bestDay = Object.entries(data.dayStats)
+      .sort((a, b) => b[1].profit - a[1].profit)[0];
+    
+    // Find best time (most profitable)
+    const bestTime = Object.entries(data.timeStats)
+      .sort((a, b) => b[1].profit - a[1].profit)[0];
+    
+    return {
+      strategy,
+      profit: data.profit,
+      trades: data.trades,
+      wins: data.wins,
+      winRate: data.trades > 0 ? Math.round((data.wins / data.trades) * 100) : 0,
+      avgProfit: data.trades > 0 ? data.profit / data.trades : 0,
+      profitFactor: data.totalLoss > 0 ? data.totalProfit / data.totalLoss : data.totalProfit > 0 ? data.totalProfit : 0,
+      bestDay: bestDay ? bestDay[0] : 'N/A',
+      bestDayProfit: bestDay ? bestDay[1].profit : 0,
+      bestTime: bestTime ? bestTime[0] : 'N/A',
+      bestTimeProfit: bestTime ? bestTime[1].profit : 0,
+    };
+  });
 
   const bestStrategy = strategyPerformance.length > 0 ? strategyPerformance.reduce((max, strat) => 
     strat.profit > max.profit ? strat : max
@@ -393,8 +439,20 @@ export default function StrategyAnalysis() {
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
                   <div className="flex items-center gap-2">
-                    <Medal className="w-3 h-3 text-yellow-400" />
-                    Status
+                    <Sun className="w-3 h-3 text-yellow-400" />
+                    Best Day
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-3 h-3 text-pink-400" />
+                    Best Time
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-3 h-3 text-green-400" />
+                    Wins
                   </div>
                 </th>
               </tr>
@@ -497,24 +555,31 @@ export default function StrategyAnalysis() {
                       <span className="text-xs text-gray-500">per trade</span>
                     </td>
                     <td className="px-4 py-4">
-                      {index === 0 && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500/30 to-emerald-500/20 text-green-400 text-xs font-bold rounded-full border border-green-500/50 shadow-lg shadow-green-500/10">
-                          <Trophy className="w-3 h-3" />
-                          BEST
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-semibold text-yellow-400">{strategy.bestDay}</span>
+                        <span className={`text-xs ${strategy.bestDayProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {strategy.bestDayProfit >= 0 ? '+' : '-'}₹{Math.abs(strategy.bestDayProfit).toLocaleString()}
                         </span>
-                      )}
-                      {strategy.profit < 0 && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-red-500/30 to-red-900/20 text-red-400 text-xs font-bold rounded-full border border-red-500/50 shadow-lg shadow-red-500/10">
-                          <AlertTriangle className="w-3 h-3" />
-                          AVOID
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-semibold text-pink-400">{strategy.bestTime}</span>
+                        <span className={`text-xs ${strategy.bestTimeProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {strategy.bestTimeProfit >= 0 ? '+' : '-'}₹{Math.abs(strategy.bestTimeProfit).toLocaleString()}
                         </span>
-                      )}
-                      {index !== 0 && strategy.profit >= 0 && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500/20 to-blue-900/10 text-blue-400 text-xs font-semibold rounded-full border border-blue-500/30">
-                          <TrendingUp className="w-3 h-3" />
-                          PROFIT
-                        </span>
-                      )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/10 flex items-center justify-center border border-green-500/30">
+                          <span className="text-sm font-bold text-green-400">{strategy.wins}</span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          <div className="text-green-400 font-semibold">{strategy.winRate}%</div>
+                          <div>win rate</div>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 ))}
