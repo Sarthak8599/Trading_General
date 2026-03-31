@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-import { Trophy, TrendingDown, Target, X, Calendar, ArrowRight, TrendingUp, TrendingUp as TrendingUpIcon } from 'lucide-react';
+import { Trophy, TrendingDown, Target, X, Calendar, ArrowRight, TrendingUp, BarChart3, PieChart, Activity, Percent, IndianRupee, Medal, AlertTriangle, Eye } from 'lucide-react';
 import { TradeService } from '../../lib/tradeService';
 import { Trade } from '../data/mockData';
 
@@ -345,68 +345,174 @@ export default function StrategyAnalysis() {
       </div>
 
       {/* Detailed Strategy Table */}
-      <div className="bg-[#161B22] border border-[#30363D] rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#30363D]">
-          <h3 className="text-lg font-semibold text-white">Detailed Strategy Statistics</h3>
+      <div className="bg-gradient-to-br from-[#161B22] to-[#0D1117] border border-[#30363D] rounded-xl overflow-hidden shadow-xl">
+        <div className="px-6 py-4 border-b border-[#30363D] bg-gradient-to-r from-[#0D1117] via-[#161B22] to-[#0D1117]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <BarChart3 className="w-5 h-5 text-[#58A6FF]" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Detailed Strategy Statistics</h3>
+              <p className="text-xs text-gray-400">Click on any strategy name to view all trades</p>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
           <table className="w-full">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-[#0D1117] border-b border-[#30363D]">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Strategy</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Total Profit</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Trades</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Win Rate</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Avg Profit</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase bg-[#0D1117]">Performance</th>
+              <tr className="bg-gradient-to-r from-[#1C2128] via-[#21262D] to-[#1C2128] border-b border-[#30363D]">
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-3 h-3 text-[#58A6FF]" />
+                    Strategy
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
+                  <div className="flex items-center gap-2">
+                    <IndianRupee className="w-3 h-3 text-green-400" />
+                    Profit
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-3 h-3 text-blue-400" />
+                    Trades
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
+                  <div className="flex items-center gap-2">
+                    <Percent className="w-3 h-3 text-purple-400" />
+                    Win Rate
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
+                  <div className="flex items-center gap-2">
+                    <PieChart className="w-3 h-3 text-orange-400" />
+                    Avg Profit
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
+                  <div className="flex items-center gap-2">
+                    <Medal className="w-3 h-3 text-yellow-400" />
+                    Status
+                  </div>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#30363D]">
+            <tbody>
               {strategyPerformance
                 .sort((a, b) => b.profit - a.profit)
                 .map((strategy, index) => (
-                  <tr key={strategy.strategy} className="hover:bg-[#0D1117] transition-colors cursor-pointer">
-                    <td className="px-6 py-4" onClick={() => handleStrategyClick(strategy.strategy)}>
-                      <div className="flex items-center gap-2 group">
-                        <span className="text-sm font-medium text-white group-hover:text-[#58A6FF] transition-colors cursor-pointer underline-offset-2 hover:underline">
-                          {strategy.strategy}
-                        </span>
-                        <ArrowRight className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <tr 
+                    key={strategy.strategy} 
+                    className={`group transition-all duration-200 cursor-pointer border-b border-[#30363D]/50 hover:bg-gradient-to-r hover:from-[#21262D]/80 hover:via-[#30363D]/60 hover:to-[#21262D]/80 ${
+                      index % 2 === 0 ? 'bg-[#161B22]/50' : 'bg-[#0D1117]/30'
+                    }`}
+                  >
+                    <td className="px-4 py-4" onClick={() => handleStrategyClick(strategy.strategy)}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-all group-hover:scale-110 ${
+                          index === 0 ? 'bg-gradient-to-br from-yellow-500/30 to-orange-500/30 text-yellow-400 border border-yellow-500/50' :
+                          strategy.profit < 0 ? 'bg-gradient-to-br from-red-500/30 to-red-900/30 text-red-400 border border-red-500/50' :
+                          'bg-gradient-to-br from-blue-500/30 to-purple-500/30 text-[#58A6FF] border border-blue-500/50'
+                        }`}>
+                          {index === 0 ? <Trophy className="w-4 h-4" /> : 
+                           strategy.profit < 0 ? <AlertTriangle className="w-4 h-4" /> : 
+                           <span>{index + 1}</span>}
+                        </div>
+                        <div>
+                          <span className="text-sm font-semibold text-white group-hover:text-[#58A6FF] transition-colors block">
+                            {strategy.strategy}
+                          </span>
+                          <span className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Eye className="w-3 h-3" /> Click to view trades
+                          </span>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`font-semibold ${strategy.profit >= 0 ? 'text-[#00C853]' : 'text-[#FF5252]'}`}>
+                    <td className="px-4 py-4">
+                      <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold text-sm ${
+                        strategy.profit >= 0 
+                          ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/10 text-green-400 border border-green-500/30' 
+                          : 'bg-gradient-to-r from-red-500/20 to-red-900/10 text-red-400 border border-red-500/30'
+                      }`}>
+                        {strategy.profit >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                         ₹{strategy.profit.toLocaleString()}
-                      </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-300">{strategy.trades}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-[#58A6FF] font-medium">{strategy.winRate}%</span>
-                        <div className="w-20 h-2 bg-[#0D1117] rounded-full overflow-hidden">
+                        <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-blue-400">{strategy.trades}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12">
+                          <svg className="w-12 h-12 transform -rotate-90">
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="20"
+                              fill="none"
+                              stroke="#21262D"
+                              strokeWidth="4"
+                            />
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="20"
+                              fill="none"
+                              stroke={strategy.winRate >= 60 ? '#00C853' : strategy.winRate >= 40 ? '#58A6FF' : '#FF5252'}
+                              strokeWidth="4"
+                              strokeDasharray={`${strategy.winRate * 1.26} 126`}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                            {strategy.winRate}%
+                          </span>
+                        </div>
+                        <div className="w-16 h-1.5 bg-[#21262D] rounded-full overflow-hidden">
                           <div 
-                            className="h-full bg-[#58A6FF] rounded-full"
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              strategy.winRate >= 60 ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 
+                              strategy.winRate >= 40 ? 'bg-gradient-to-r from-blue-400 to-blue-500' : 
+                              'bg-gradient-to-r from-red-400 to-red-500'
+                            }`}
                             style={{ width: `${strategy.winRate}%` }}
                           />
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`font-medium ${strategy.avgProfit >= 0 ? 'text-gray-300' : 'text-[#FF5252]'}`}>
-                        ₹{strategy.avgProfit.toFixed(2)}
-                      </span>
+                    <td className="px-4 py-4">
+                      <div className={`text-sm font-semibold ${
+                        strategy.avgProfit >= 0 
+                          ? 'text-green-400' 
+                          : 'text-red-400'
+                      }`}>
+                        {strategy.avgProfit >= 0 ? '+' : '-'}₹{Math.abs(strategy.avgProfit).toFixed(2)}
+                      </div>
+                      <span className="text-xs text-gray-500">per trade</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4">
                       {index === 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-900/30 text-[#00C853] text-xs font-semibold rounded">
-                          <Trophy size={12} />
-                          Best
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500/30 to-emerald-500/20 text-green-400 text-xs font-bold rounded-full border border-green-500/50 shadow-lg shadow-green-500/10">
+                          <Trophy className="w-3 h-3" />
+                          BEST
                         </span>
                       )}
                       {strategy.profit < 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-900/30 text-[#FF5252] text-xs font-semibold rounded">
-                          <TrendingDown size={12} />
-                          Avoid
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-red-500/30 to-red-900/20 text-red-400 text-xs font-bold rounded-full border border-red-500/50 shadow-lg shadow-red-500/10">
+                          <AlertTriangle className="w-3 h-3" />
+                          AVOID
+                        </span>
+                      )}
+                      {index !== 0 && strategy.profit >= 0 && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500/20 to-blue-900/10 text-blue-400 text-xs font-semibold rounded-full border border-blue-500/30">
+                          <TrendingUp className="w-3 h-3" />
+                          PROFIT
                         </span>
                       )}
                     </td>
