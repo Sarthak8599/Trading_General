@@ -11,7 +11,8 @@ import {
   Settings,
   User,
   Calculator,
-  CalendarDays
+  CalendarDays,
+  Brain
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -25,7 +26,8 @@ const menuItems = [
   { path: '/equity-drawdown', label: 'Equity & Drawdown', icon: TrendingUp },
   { path: '/mistake-tracker', label: 'Mistake Tracker', icon: AlertTriangle },
   { path: '/trade-history', label: 'Trade History', icon: History },
-  { path: '/currency-converter', label: 'Currency Calculator', icon: Calculator }
+  { path: '/currency-converter', label: 'Currency Calculator', icon: Calculator },
+  { path: '/mind-health', label: 'Mind Health', icon: Brain }
 ];
 
 export function Layout() {

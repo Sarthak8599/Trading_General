@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import CurrencyConverter from "./pages/CurrencyConverter";
 import MonthlyCalendar from "./pages/MonthlyCalendar";
+import MindHealth from "./pages/MindHealth";
 
 export const router = createBrowserRouter([
   {
@@ -35,7 +36,8 @@ export const router = createBrowserRouter([
       { path: "equity-drawdown", Component: EquityDrawdown },
       { path: "mistake-tracker", Component: MistakeTracker },
       { path: "trade-history", Component: TradeHistory },
-      { path: "currency-converter", Component: CurrencyConverter }
+      { path: "currency-converter", Component: CurrencyConverter },
+      { path: "mind-health", Component: MindHealth }
     ]
   }
 ]);
