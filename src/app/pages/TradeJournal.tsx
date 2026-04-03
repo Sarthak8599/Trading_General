@@ -1,5 +1,5 @@
-import { useState, useEffect, type FormEvent } from 'react';
-import { Search, Filter, Plus, Upload, TrendingUp, TrendingDown, Trash2, Download, Edit3, FileUp } from 'lucide-react';
+import { useState, useEffect, type FormEvent, useRef } from 'react';
+import { Search, Filter, Plus, Upload, TrendingUp, TrendingDown, Trash2, Download, Edit3, FileUp, Mic, MicOff } from 'lucide-react';
 import { Trade } from '../data/mockData';
 import { TradeService } from '../../lib/tradeService';
 
@@ -16,11 +16,168 @@ export default function TradeJournal() {
   const [importing, setImporting] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importPreview, setImportPreview] = useState<Trade[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [listeningField, setListeningField] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Load trades from Supabase on component mount
   useEffect(() => {
     loadTrades();
   }, []);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const last = event.results.length - 1;
+        const transcript = event.results[last][0].transcript;
+        
+        if (listeningField && transcript) {
+          handleVoiceInput(listeningField, transcript);
+        }
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        stopListening();
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        setListeningField(null);
+      };
+    }
+  }, [listeningField]);
+
+  const handleVoiceInput = (field: string, transcript: string) => {
+    const processedTranscript = processVoiceInput(field, transcript);
+    
+    // Handle numeric fields
+    if (['strikePrice', 'entryPrice', 'exitPrice', 'quantity', 'profitLoss'].includes(field)) {
+      const numValue = parseFloat(processedTranscript) || 0;
+      setNewTrade(prev => ({ ...prev, [field]: numValue }));
+    } else {
+      setNewTrade(prev => ({ ...prev, [field]: processedTranscript }));
+    }
+  };
+
+  const processVoiceInput = (field: string, transcript: string): string => {
+    const lowerTranscript = transcript.toLowerCase().trim();
+    
+    switch (field) {
+      case 'date':
+        // Extract date from voice input
+        const dateMatch = lowerTranscript.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (dateMatch) {
+          const [, day, month, year] = dateMatch;
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+        // Handle natural language dates
+        if (lowerTranscript.includes('today')) {
+          return new Date().toISOString().split('T')[0];
+        }
+        if (lowerTranscript.includes('yesterday')) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          return yesterday.toISOString().split('T')[0];
+        }
+        return transcript;
+        
+      case 'time':
+        // Extract time from voice input
+        const timeMatch = lowerTranscript.match(/(\d{1,2})[:\s](\d{2})\s*(am|pm)?/);
+        if (timeMatch) {
+          let [, hourStr, minuteStr, period] = timeMatch;
+          let hour = parseInt(hourStr);
+          const minute = parseInt(minuteStr);
+          
+          if (period === 'pm' && hour !== 12) hour += 12;
+          if (period === 'am' && hour === 12) hour = 0;
+          
+          return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        }
+        return transcript;
+        
+      case 'day':
+        // Extract day from voice input
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const foundDay = days.find(day => lowerTranscript.includes(day));
+        return foundDay ? foundDay.charAt(0).toUpperCase() + foundDay.slice(1) : transcript;
+        
+      case 'symbol':
+        // Map common voice inputs to symbols
+        const symbolMap: { [key: string]: string } = {
+          'nifty': 'NIFTY',
+          'bank nifty': 'BANKNIFTY',
+          'banknifty': 'BANKNIFTY',
+          'bitcoin': 'BTC',
+          'btc': 'BTC',
+          'gold': 'GOLD',
+          'euro': 'EUR/USD',
+          'euro dollar': 'EUR/USD',
+          'sensex': 'SENSEX',
+          'midcap': 'MIDCAP',
+          'dollar yen': 'USD/JPY',
+          'crude oil': 'CRUDEOIL',
+          'crude': 'CRUDEOIL'
+        };
+        
+        for (const [key, value] of Object.entries(symbolMap)) {
+          if (lowerTranscript.includes(key)) {
+            return value;
+          }
+        }
+        return transcript.toUpperCase();
+        
+      case 'optionType':
+        return lowerTranscript.includes('call') || lowerTranscript.includes('ce') ? 'CE' : 
+               lowerTranscript.includes('put') || lowerTranscript.includes('pe') ? 'PE' : transcript;
+        
+      case 'tradeResult':
+        return lowerTranscript.includes('win') || lowerTranscript.includes('profit') || lowerTranscript.includes('gain') ? 'Win' :
+               lowerTranscript.includes('loss') || lowerTranscript.includes('lose') ? 'Loss' : transcript;
+        
+      case 'strikePrice':
+      case 'entryPrice':
+      case 'exitPrice':
+      case 'quantity':
+      case 'profitLoss':
+        // Extract numbers from voice input
+        const numberMatch = lowerTranscript.match(/(\d+(?:\.\d+)?)/);
+        if (numberMatch) {
+          return numberMatch[1];
+        }
+        return transcript;
+        
+      default:
+        return transcript;
+    }
+  };
+
+  const startListening = (field: string) => {
+    if (!recognitionRef.current) {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+      return;
+    }
+    
+    setIsListening(true);
+    setListeningField(field);
+    recognitionRef.current.start();
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+    setListeningField(null);
+  };
 
   const loadTrades = async () => {
     try {
@@ -470,21 +627,69 @@ export default function TradeJournal() {
             {editTradeId ? 'Edit Trade' : 'Add New Trade'}
           </h2>
           <form onSubmit={handleSubmitAddTrade} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <input value={newTrade.date} onChange={(e) => handleInputChange('date', e.target.value)} required type="date" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Enter trade date (e.g. 2026-03-27)</p>
+            <div className="relative">
+              <input value={newTrade.date} onChange={(e) => handleInputChange('date', e.target.value)} required type="date" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'date' ? stopListening() : startListening('date')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'date' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'date' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Enter trade date or say "today"/"yesterday"</p>
             </div>
-            <div>
-              <input value={newTrade.time} onChange={(e) => handleInputChange('time', e.target.value)} required type="time" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Enter trade time (e.g. 09:45)</p>
+            <div className="relative">
+              <input value={newTrade.time} onChange={(e) => handleInputChange('time', e.target.value)} required type="time" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'time' ? stopListening() : startListening('time')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'time' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'time' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Enter trade time or say "9:45 AM"</p>
             </div>
-            <div>
-              <input value={newTrade.day} onChange={(e) => handleInputChange('day', e.target.value)} required placeholder="Day" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Enter day of week (e.g. Monday)</p>
+            <div className="relative">
+              <input value={newTrade.day} onChange={(e) => handleInputChange('day', e.target.value)} required placeholder="Day" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'day' ? stopListening() : startListening('day')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'day' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'day' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Enter day or say "Monday" etc.</p>
             </div>
-            <div>
-              <input value={newTrade.tradeName} onChange={(e) => handleInputChange('tradeName', e.target.value)} placeholder="Trade Name (e.g. NIFTY Breakout)" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Give your trade a meaningful name for reference</p>
+            <div className="relative">
+              <input value={newTrade.tradeName} onChange={(e) => handleInputChange('tradeName', e.target.value)} placeholder="Trade Name (e.g. NIFTY Breakout)" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'tradeName' ? stopListening() : startListening('tradeName')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'tradeName' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'tradeName' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say trade name or type manually</p>
             </div>
             <div>
               <select value={newTrade.symbol} onChange={(e) => handleInputChange('symbol', e.target.value)} className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200">
@@ -507,33 +712,105 @@ export default function TradeJournal() {
               </select>
               <p className="mt-1 text-xs text-gray-400">Select option type (CE/PE)</p>
             </div>
-            <div>
-              <input type="number" value={newTrade.strikePrice} onChange={(e) => handleInputChange('strikePrice', Number(e.target.value))} placeholder="Strike Price" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Strike price (e.g. 22500)</p>
+            <div className="relative">
+              <input type="number" value={newTrade.strikePrice} onChange={(e) => handleInputChange('strikePrice', Number(e.target.value))} placeholder="Strike Price" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'strikePrice' ? stopListening() : startListening('strikePrice')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'strikePrice' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'strikePrice' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say price like "22500" or type manually</p>
             </div>
-            <div>
-              <input value={newTrade.strategyName} onChange={(e) => handleInputChange('strategyName', e.target.value)} required placeholder="Strategy Name" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Strategy tag (e.g. Breakout)</p>
+            <div className="relative">
+              <input value={newTrade.strategyName} onChange={(e) => handleInputChange('strategyName', e.target.value)} required placeholder="Strategy Name" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'strategyName' ? stopListening() : startListening('strategyName')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'strategyName' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'strategyName' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say strategy name or type manually</p>
             </div>
-            <div>
-              <input type="number" value={newTrade.entryPrice} onChange={(e) => handleInputChange('entryPrice', Number(e.target.value))} placeholder="Entry" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Entry price (e.g. 145.5)</p>
+            <div className="relative">
+              <input type="number" value={newTrade.entryPrice} onChange={(e) => handleInputChange('entryPrice', Number(e.target.value))} placeholder="Entry" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'entryPrice' ? stopListening() : startListening('entryPrice')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'entryPrice' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'entryPrice' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say entry price like "145.5"</p>
             </div>
-            <div>
-              <input type="number" value={newTrade.exitPrice} onChange={(e) => handleInputChange('exitPrice', Number(e.target.value))} placeholder="Exit" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Exit price (e.g. 178.2)</p>
+            <div className="relative">
+              <input type="number" value={newTrade.exitPrice} onChange={(e) => handleInputChange('exitPrice', Number(e.target.value))} placeholder="Exit" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'exitPrice' ? stopListening() : startListening('exitPrice')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'exitPrice' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'exitPrice' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say exit price like "178.2"</p>
             </div>
-            <div>
-              <input type="number" value={newTrade.quantity} onChange={(e) => handleInputChange('quantity', Number(e.target.value))} placeholder="Quantity" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Quantity (e.g. 50)</p>
+            <div className="relative">
+              <input type="number" value={newTrade.quantity} onChange={(e) => handleInputChange('quantity', Number(e.target.value))} placeholder="Quantity" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'quantity' ? stopListening() : startListening('quantity')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'quantity' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'quantity' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say quantity like "fifty"</p>
             </div>
             <div>
               <input value={newTrade.riskRewardRatio} onChange={(e) => handleInputChange('riskRewardRatio', e.target.value)} placeholder="Risk/Reward" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
               <p className="mt-1 text-xs text-gray-400">Risk/Reward ratio (e.g. 1:3.3)</p>
             </div>
-            <div>
-              <input type="number" value={newTrade.profitLoss} onChange={(e) => handleInputChange('profitLoss', Number(e.target.value))} placeholder="Profit/Loss" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">P&L amount (positive or negative)</p>
+            <div className="relative">
+              <input type="number" value={newTrade.profitLoss} onChange={(e) => handleInputChange('profitLoss', Number(e.target.value))} placeholder="Profit/Loss" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'profitLoss' ? stopListening() : startListening('profitLoss')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'profitLoss' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'profitLoss' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say P&L like "profit 500" or "loss 200"</p>
             </div>
             <div>
               <select value={newTrade.tradeResult} onChange={(e) => handleInputChange('tradeResult', e.target.value)} className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200">
@@ -542,13 +819,37 @@ export default function TradeJournal() {
               </select>
               <p className="mt-1 text-xs text-gray-400">Trade outcome (Win/Loss)</p>
             </div>
-            <div>
-              <input value={newTrade.mistakeTag} onChange={(e) => handleInputChange('mistakeTag', e.target.value)} placeholder="Mistake Tag" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Optional error note (e.g. Late Entry)</p>
+            <div className="relative">
+              <input value={newTrade.mistakeTag} onChange={(e) => handleInputChange('mistakeTag', e.target.value)} placeholder="Mistake Tag" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'mistakeTag' ? stopListening() : startListening('mistakeTag')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'mistakeTag' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'mistakeTag' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say mistake like "late entry"</p>
             </div>
-            <div>
-              <input value={newTrade.emotionTag} onChange={(e) => handleInputChange('emotionTag', e.target.value)} placeholder="Emotion Tag" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
-              <p className="mt-1 text-xs text-gray-400">Optional emotion tag (e.g. Fear)</p>
+            <div className="relative">
+              <input value={newTrade.emotionTag} onChange={(e) => handleInputChange('emotionTag', e.target.value)} placeholder="Emotion Tag" className="w-full px-3 py-2 pr-10 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
+              <button
+                type="button"
+                onClick={() => isListening && listeningField === 'emotionTag' ? stopListening() : startListening('emotionTag')}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-colors ${
+                  isListening && listeningField === 'emotionTag' 
+                    ? 'bg-red-500 text-white animate-pulse' 
+                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                }`}
+                title="Voice input"
+              >
+                {isListening && listeningField === 'emotionTag' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <p className="mt-1 text-xs text-gray-400">Say emotion like "fear" or "greedy"</p>
             </div>
             <div className="col-span-1 md:col-span-2">
               <input value={newTrade.notes} onChange={(e) => handleInputChange('notes', e.target.value)} placeholder="Notes" className="w-full px-3 py-2 bg-[#0D1117] border border-[#30363D] rounded-lg text-gray-200" />
