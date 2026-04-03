@@ -124,9 +124,88 @@ export default function StrategyAnalysis() {
     const bestDay = Object.entries(data.dayStats)
       .sort((a, b) => b[1].profit - a[1].profit)[0];
     
-    // Find best time (most profitable)
-    const bestTime = Object.entries(data.timeStats)
-      .sort((a, b) => b[1].profit - a[1].profit)[0];
+    // Find best time range (most successful trades)
+    const timeEntries = Object.entries(data.timeStats)
+      .filter(([_, stats]) => stats.trades > 0)
+      .map(([time, stats]) => ({
+        time,
+        profit: stats.profit,
+        trades: stats.trades,
+        wins: stats.wins,
+        winRate: stats.trades > 0 ? (stats.wins / stats.trades) * 100 : 0
+      }))
+      .sort((a, b) => b.winRate - a.winRate); // Sort by win rate
+    
+    // Find consecutive time range with highest success
+    let bestTimeRange = 'N/A';
+    let bestTimeRangeProfit = 0;
+    let bestTimeRangeWinRate = 0;
+    
+    if (timeEntries.length > 0) {
+      // Convert times to numbers for comparison
+      const timeNumbers = timeEntries.map(entry => ({
+        ...entry,
+        hour: parseInt(entry.time.split(':')[0])
+      })).filter(entry => !isNaN(entry.hour));
+      
+      // Sort by hour
+      timeNumbers.sort((a, b) => a.hour - b.hour);
+      
+      // Find best consecutive range (2-3 hours)
+      let maxWinRate = 0;
+      let maxProfit = 0;
+      let bestStartHour = 0;
+      let bestEndHour = 0;
+      
+      for (let i = 0; i < timeNumbers.length; i++) {
+        // Check 2-hour range
+        if (i + 1 < timeNumbers.length && timeNumbers[i + 1].hour - timeNumbers[i].hour <= 2) {
+          const rangeTrades = timeNumbers[i].trades + timeNumbers[i + 1].trades;
+          const rangeWins = timeNumbers[i].wins + timeNumbers[i + 1].wins;
+          const rangeProfit = timeNumbers[i].profit + timeNumbers[i + 1].profit;
+          const rangeWinRate = rangeTrades > 0 ? (rangeWins / rangeTrades) * 100 : 0;
+          
+          if (rangeWinRate > maxWinRate || (rangeWinRate === maxWinRate && rangeProfit > maxProfit)) {
+            maxWinRate = rangeWinRate;
+            maxProfit = rangeProfit;
+            bestStartHour = timeNumbers[i].hour;
+            bestEndHour = timeNumbers[i + 1].hour;
+          }
+        }
+        
+        // Check 3-hour range
+        if (i + 2 < timeNumbers.length && timeNumbers[i + 2].hour - timeNumbers[i].hour <= 3) {
+          const rangeTrades = timeNumbers[i].trades + timeNumbers[i + 1].trades + timeNumbers[i + 2].trades;
+          const rangeWins = timeNumbers[i].wins + timeNumbers[i + 1].wins + timeNumbers[i + 2].wins;
+          const rangeProfit = timeNumbers[i].profit + timeNumbers[i + 1].profit + timeNumbers[i + 2].profit;
+          const rangeWinRate = rangeTrades > 0 ? (rangeWins / rangeTrades) * 100 : 0;
+          
+          if (rangeWinRate > maxWinRate || (rangeWinRate === maxWinRate && rangeProfit > maxProfit)) {
+            maxWinRate = rangeWinRate;
+            maxProfit = rangeProfit;
+            bestStartHour = timeNumbers[i].hour;
+            bestEndHour = timeNumbers[i + 2].hour;
+          }
+        }
+      }
+      
+      // If no good range found, use the best single time
+      if (maxWinRate === 0 && timeEntries.length > 0) {
+        const bestSingle = timeEntries[0];
+        bestTimeRange = bestSingle.time;
+        bestTimeRangeProfit = bestSingle.profit;
+        bestTimeRangeWinRate = bestSingle.winRate;
+      } else if (maxWinRate > 0) {
+        // Format the range
+        if (bestStartHour === bestEndHour) {
+          bestTimeRange = `${bestStartHour}:00`;
+        } else {
+          bestTimeRange = `${bestStartHour}:00-${bestEndHour + 1}:00`;
+        }
+        bestTimeRangeProfit = maxProfit;
+        bestTimeRangeWinRate = maxWinRate;
+      }
+    }
     
     return {
       strategy,
@@ -138,8 +217,9 @@ export default function StrategyAnalysis() {
       profitFactor: data.totalLoss > 0 ? data.totalProfit / data.totalLoss : data.totalProfit > 0 ? data.totalProfit : 0,
       bestDay: bestDay ? bestDay[0] : 'N/A',
       bestDayProfit: bestDay ? bestDay[1].profit : 0,
-      bestTime: bestTime ? bestTime[0] : 'N/A',
-      bestTimeProfit: bestTime ? bestTime[1].profit : 0,
+      bestTime: bestTimeRange,
+      bestTimeProfit: bestTimeRangeProfit,
+      bestTimeWinRate: bestTimeRangeWinRate,
     };
   });
 
@@ -446,7 +526,7 @@ export default function StrategyAnalysis() {
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3 text-pink-400" />
-                    Best Time
+                    Best Time Range
                   </div>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider bg-[#1C2128]">
@@ -567,6 +647,9 @@ export default function StrategyAnalysis() {
                         <span className="text-sm font-semibold text-pink-400">{strategy.bestTime}</span>
                         <span className={`text-xs ${strategy.bestTimeProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {strategy.bestTimeProfit >= 0 ? '+' : '-'}₹{Math.abs(strategy.bestTimeProfit).toLocaleString()}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {strategy.bestTimeWinRate > 0 ? `${Math.round(strategy.bestTimeWinRate)}% win rate` : 'N/A'}
                         </span>
                       </div>
                     </td>
