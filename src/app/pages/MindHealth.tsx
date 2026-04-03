@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Brain, Play, Pause, Timer, Waves, Sparkles, Info, Volume2 } from 'lucide-react';
+import { Brain, Play, Pause, Timer, Waves, Sparkles, Info, Volume2, Heart, Moon } from 'lucide-react';
 
 interface WaveOption {
   id: string;
@@ -32,6 +32,16 @@ const waveOptions: WaveOption[] = [
     color: 'from-purple-500 to-pink-500',
     bgGradient: 'from-purple-500/20 to-pink-500/20',
     icon: <Sparkles className="w-8 h-8" />
+  },
+  {
+    id: 'delta',
+    name: 'Cortisol Reducer',
+    frequency: 3,
+    description: '3 Hz (Delta range) - Specifically targets cortisol (stress hormone) reduction. Use after stressful trading or before sleep. 15 minute session.',
+    duration: 900,
+    color: 'from-emerald-500 to-teal-500',
+    bgGradient: 'from-emerald-500/20 to-teal-500/20',
+    icon: <Moon className="w-8 h-8" />
   }
 ];
 
@@ -219,7 +229,7 @@ export default function MindHealth() {
       </div>
 
       {/* Wave Options */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         {waveOptions.map((wave) => (
           <div
             key={wave.id}
@@ -277,22 +287,11 @@ export default function MindHealth() {
                 </div>
               )}
 
-              {/* Playing Indicator for Alpha */}
-              {wave.duration === 0 && playingId === wave.id && (
-                <div className="flex items-center gap-2 mb-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
-                  <div className="flex gap-1">
-                    {[...Array(4)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-1 bg-blue-400 rounded-full animate-pulse"
-                        style={{
-                          height: `${20 + i * 10}px`,
-                          animationDelay: `${i * 0.1}s`
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-sm text-blue-400 ml-2">Playing - Focus Mode Active</span>
+              {/* Playing Indicator for Delta */}
+              {wave.id === 'delta' && playingId === wave.id && (
+                <div className="flex items-center gap-2 mb-4 p-3 bg-emerald-500/20 rounded-lg border border-emerald-500/30">
+                  <Heart className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  <span className="text-sm text-emerald-400">Playing - Cortisol Reduction Active</span>
                 </div>
               )}
 
@@ -323,7 +322,7 @@ export default function MindHealth() {
       </div>
 
       {/* Benefits Section */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Waves className="w-5 h-5 text-blue-400" />
@@ -348,6 +347,21 @@ export default function MindHealth() {
             {['Deep relaxation and meditation', 'Mental clarity and preparation', 'Reduced pre-trading jitters', 'Enhanced creativity', 'Better emotional balance'].map((benefit, i) => (
               <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                {benefit}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="bg-[#161B22] border border-[#30363D] rounded-xl p-6">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Heart className="w-5 h-5 text-emerald-400" />
+            Cortisol Reducer Benefits (3 Hz)
+          </h3>
+          <ul className="space-y-2">
+            {['Lowers cortisol stress hormones', 'Deep restorative relaxation', 'Improved sleep quality', 'Physical and mental recovery', 'Reduced trading stress aftermath'].map((benefit, i) => (
+              <li key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 {benefit}
               </li>
             ))}
